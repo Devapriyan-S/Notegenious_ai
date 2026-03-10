@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from dotenv import load_dotenv
@@ -31,6 +31,20 @@ app.add_middleware(
     expose_headers=["Content-Length", "Content-Type"],
     max_age=600,
 )
+
+# Safety-net middleware: FastAPI's CORSMiddleware does NOT add
+# Access-Control-Allow-Origin headers when the handler raises an unhandled
+# exception (i.e. returns 500). This middleware ensures CORS headers are
+# present on every response so the browser can always read the error body.
+# It must be added AFTER CORSMiddleware so it runs as the outermost layer.
+@app.middleware("http")
+async def add_cors_on_error(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Origin, X-Requested-With, X-HTTP-Method-Override"
+    return response
+
 
 # Explicit catch-all OPTIONS handler so that CORS preflight requests for any
 # path are always answered with 200 even if the CORS middleware is bypassed by

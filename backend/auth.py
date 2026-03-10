@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -18,7 +19,10 @@ from models import SignupRequest, LoginRequest, ProfileUpdate, TokenResponse, Us
 load_dotenv()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-security = HTTPBearer()
+# auto_error=False makes HTTPBearer return None instead of raising 403 when
+# the Authorization header is absent. We raise 401 ourselves so the browser
+# and frontend receive the correct status code for unauthenticated requests.
+security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -117,7 +121,10 @@ def create_token(user_id: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
     return jwt.encode({"sub": user_id, "exp": expire}, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+def get_current_user_id(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> str:
+    # credentials is None when the Authorization header is absent (auto_error=False)
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_id = payload.get("sub")
@@ -201,10 +208,15 @@ def verify_otp(body: OTPVerifyRequest):
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest):
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM backend_users WHERE email = %s", (body.email,))
-        user = cur.fetchone()
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM backend_users WHERE email = %s", (body.email,))
+            user = cur.fetchone()
+    except Exception as e:
+        import traceback
+        print(f"LOGIN ERROR: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(str(user["id"]))
