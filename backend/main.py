@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from dotenv import load_dotenv
 import os
 
@@ -14,17 +15,29 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS — allow all origins so the Vercel frontend can reach the Render backend.
-# For a public note-taking app this is safe. If you later want to restrict to
-# specific domains, replace ["*"] with a list of your Vercel URLs and keep
-# allow_credentials=False (credentials + wildcard is not permitted by browsers).
+# CORS must be registered first — before any router — so that preflight OPTIONS
+# requests are answered before FastAPI's own routing can reject them.
+# allow_methods and allow_headers use explicit lists instead of ["*"] because
+# some proxies (including Render's edge layer) do not propagate a bare wildcard
+# correctly in the Access-Control-Allow-Methods / Access-Control-Allow-Headers
+# response headers, causing preflight requests to be rejected with 403.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin",
+                   "X-Requested-With", "X-HTTP-Method-Override"],
+    expose_headers=["Content-Length", "Content-Type"],
+    max_age=600,
 )
+
+# Explicit catch-all OPTIONS handler so that CORS preflight requests for any
+# path are always answered with 200 even if the CORS middleware is bypassed by
+# the proxy. This is a safety net and does not interfere with normal requests.
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    return Response(status_code=200)
 
 app.include_router(auth_router)
 app.include_router(notes_router)
