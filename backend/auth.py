@@ -35,24 +35,21 @@ otp_store: dict = {}
 
 def send_otp_email(to_email: str, otp: str) -> None:
     """Send a 6-digit OTP to the given email address via SMTP."""
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    smtp_from = os.getenv("SMTP_FROM", smtp_user)
+    import traceback as _traceback
+    try:
+        smtp_host = "smtp.mailersend.net"
+        smtp_port = 2525
+        smtp_user = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        smtp_password = "mssp.Mk8Q1u6.o65qngkp803lwr12.85s8KyN"
+        smtp_from = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
 
-    if not smtp_user or not smtp_password:
-        # SMTP not configured — log OTP to console for development
-        print(f"[OTP] Verification code for {to_email}: {otp}")
-        return
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "NoteGenius AI — Email Verification Code"
+        msg["From"] = formataddr(("Notegenious AI", smtp_from))
+        msg["To"] = to_email
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "NoteGenius AI — Email Verification Code"
-    msg["From"] = formataddr(("Notegenious AI", smtp_from))
-    msg["To"] = to_email
-
-    text_body = f"Your NoteGenius AI verification code is: {otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email."
-    html_body = f"""
+        text_body = f"Your NoteGenius AI verification code is: {otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email."
+        html_body = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
       <h2 style="color:#7c3aed;">NoteGenius AI</h2>
       <p>Your email verification code is:</p>
@@ -61,39 +58,44 @@ def send_otp_email(to_email: str, otp: str) -> None:
       <p style="color:#999;font-size:12px;">If you did not request this, please ignore this email.</p>
     </div>
     """
-    msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.sendmail(smtp_from, to_email, msg.as_string())
+        print(f"[EMAIL] Connecting to SMTP (port {smtp_port})...")
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            print(f"[EMAIL] Sending to {to_email}...")
+            server.sendmail(smtp_from, to_email, msg.as_string())
+        print(f"[EMAIL] Sent successfully to {to_email}")
+    except Exception:
+        print(f"[EMAIL] send_otp_email FAILED for {to_email}:")
+        _traceback.print_exc()
+        raise
 
 
 def send_invite_email(to_email: str) -> None:
     """Send an invitation to join NoteGenius AI."""
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    smtp_from = os.getenv("SMTP_FROM", smtp_user)
-    app_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    import traceback as _traceback
+    try:
+        smtp_host = "smtp.mailersend.net"
+        smtp_port = 2525
+        smtp_user = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        smtp_password = "mssp.Mk8Q1u6.o65qngkp803lwr12.85s8KyN"
+        smtp_from = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        app_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-    if not smtp_user or not smtp_password:
-        print(f"[INVITE] Invitation for {to_email}: sign up at {app_url}")
-        return
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "You've been invited to NoteGenius AI"
+        msg["From"] = formataddr(("Notegenious AI", smtp_from))
+        msg["To"] = to_email
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "You've been invited to NoteGenius AI"
-    msg["From"] = formataddr(("Notegenious AI", smtp_from))
-    msg["To"] = to_email
-
-    text_body = (
-        f"You've been invited to collaborate on NoteGenius AI.\n\n"
-        f"Sign up for free at: {app_url}\n\n"
-        f"If you did not expect this invitation, please ignore this email."
-    )
-    html_body = f"""
+        text_body = (
+            f"You've been invited to collaborate on NoteGenius AI.\n\n"
+            f"Sign up for free at: {app_url}\n\n"
+            f"If you did not expect this invitation, please ignore this email."
+        )
+        html_body = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
       <h2 style="color:#7c3aed;">NoteGenius AI</h2>
       <p>Someone has invited you to collaborate on their notes!</p>
@@ -102,14 +104,67 @@ def send_invite_email(to_email: str) -> None:
       <p style="color:#999;font-size:12px;">If you did not expect this, please ignore this email.</p>
     </div>
     """
-    msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.sendmail(smtp_from, to_email, msg.as_string())
-    print(f"[EMAIL] Invite sent to {to_email}")
+        print(f"[EMAIL] Connecting to SMTP (port {smtp_port})...")
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            print(f"[EMAIL] Sending to {to_email}...")
+            server.sendmail(smtp_from, to_email, msg.as_string())
+        print(f"[EMAIL] Sent successfully to {to_email}")
+    except Exception:
+        print(f"[EMAIL] send_invite_email FAILED for {to_email}:")
+        _traceback.print_exc()
+        raise
+
+
+def send_share_notification_email(to_email: str, owner_email: str, note_title: str, permission: str) -> None:
+    """Send a notification email to an existing user when a note is shared with them."""
+    import traceback as _traceback
+    try:
+        smtp_host = "smtp.mailersend.net"
+        smtp_port = 2525
+        smtp_user = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        smtp_password = "mssp.Mk8Q1u6.o65qngkp803lwr12.85s8KyN"
+        smtp_from = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        app_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Someone shared a note with you on Notegenious AI"
+        msg["From"] = formataddr(("Notegenious AI", smtp_from))
+        msg["To"] = to_email
+
+        text_body = (
+            f"{owner_email} shared a note titled \"{note_title}\" with you.\n\n"
+            f"Permission: {permission}\n\n"
+            f"Open Notegenious AI to view it: {app_url}\n\n"
+            f"If you did not expect this, please ignore this email."
+        )
+        html_body = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+      <h2 style="color:#6d28d9;">A note has been shared with you!</h2>
+      <p><b>{owner_email}</b> shared a note titled <b>"{note_title}"</b> with you.</p>
+      <p>Permission: <b>{permission}</b></p>
+      <p><a href="{app_url}" style="background:#6d28d9;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">Open Notegenious AI</a></p>
+      <p style="color:#999;font-size:12px;">If you did not expect this, please ignore this email.</p>
+    </div>
+    """
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
+        print(f"[EMAIL] Connecting to SMTP (port {smtp_port})...")
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            print(f"[EMAIL] Sending share notification to {to_email}...")
+            server.sendmail(smtp_from, to_email, msg.as_string())
+        print(f"[EMAIL] Share notification sent to {to_email}")
+    except Exception:
+        print(f"[EMAIL] send_share_notification_email FAILED for {to_email}:")
+        _traceback.print_exc()
+        raise
 
 
 def hash_password(password: str) -> str:
