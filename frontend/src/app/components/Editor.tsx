@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Download, Trash2, FileText, Loader2, Share2, Eye, Mic, MicOff } from 'lucide-react';
 import { Note, Theme } from '../page';
 import ShareModal from './ShareModal';
+import { SHARED_GROQ_API_KEY } from '@/lib/config';
 
 interface EditorProps {
   note: Note | null;
@@ -105,11 +106,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
 
     if (!noteIdRef.current) return;
 
-    const apiKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null;
-    if (!apiKey) {
-      alert('Please add your Groq API key in Settings to use speech-to-text.');
-      return;
-    }
+    const apiKey = SHARED_GROQ_API_KEY;
 
     if (!navigator.mediaDevices?.getUserMedia) {
       alert('Microphone access is not supported in this browser.');
@@ -209,8 +206,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     if (!text.trim() || text === lastTextRef.current) return;
     lastTextRef.current = text;
 
-    const apiKey = localStorage.getItem('groq_api_key');
-    if (!apiKey) return;
+    const apiKey = SHARED_GROQ_API_KEY;
 
     const lines = text.split('\n');
     const lastLine = lines[lines.length - 1].trim();

@@ -177,10 +177,6 @@ export default function Home() {
     apiGetMe()
       .then((user) => {
         setApiUser(user);
-        if (user && user.groq_api_key) {
-          localStorage.setItem('groq_api_key', user.groq_api_key);
-          setApiKey(user.groq_api_key);
-        }
         setAuthLoading(false);
       })
       .catch(() => {
@@ -223,11 +219,6 @@ export default function Home() {
     setSelectedId((prev) => prev ?? notes[0]?.id ?? null);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Always load apiKey from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem('groq_api_key');
-    if (stored) setApiKey(stored);
-  }, []);
 
   // ----------------------------------------------------------------
   // Apply theme to document

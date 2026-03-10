@@ -15,6 +15,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Note, Theme } from '../page';
+import { SHARED_GROQ_API_KEY } from '@/lib/config';
 
 interface AIPanelProps {
   note: Note | null;
@@ -111,7 +112,6 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
     : 'bg-slate-100 border-slate-200 text-slate-700 placeholder-slate-400 focus:border-violet-400';
 
   const checkApiAndNote = (): string | null => {
-    if (!apiKey) { setError('No Groq API key set. Click "How to get my free key \u2192" in the left sidebar to set it up.'); return null; }
     if (!note?.content?.trim()) { setError('The note is empty. Add some content first.'); return null; }
     setError('');
     return note.content;
@@ -144,7 +144,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
     setAiResult('');
     setShowRewrite(false);
     try {
-      const result = await callGroq(apiKey, [{ role: 'user', content: `${option.prompt}\n\n${content}` }]);
+      const result = await callGroq(SHARED_GROQ_API_KEY, [{ role: 'user', content: `${option.prompt}\n\n${content}` }]);
       setAiResult(result);
       setAiMode('replace');
     } catch (e) {
@@ -161,7 +161,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
     setAiResult('');
     setShowTranslate(false);
     try {
-      const result = await callGroq(apiKey, [{ role: 'user', content: `${option.prompt}\n\n${content}` }]);
+      const result = await callGroq(SHARED_GROQ_API_KEY, [{ role: 'user', content: `${option.prompt}\n\n${content}` }]);
       setAiResult(result);
       setAiMode('append');
     } catch (e) {
@@ -185,8 +185,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
   };
 
   const handleSendChat = async () => {
-    if (!chatInput.trim() || !apiKey) {
-      if (!apiKey) setError('No Groq API key set. Click "How to get my free key \u2192" in the left sidebar to set it up.');
+    if (!chatInput.trim()) {
       return;
     }
     setError('');
@@ -201,7 +200,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
         ? `You are a helpful assistant. The user is working on a note. Here is the note content:\n\n---\nTitle: ${note.title}\n${note.content}\n---\n\nAnswer questions about this note or help the user improve it.`
         : 'You are a helpful assistant for note-taking.';
 
-      const result = await callGroq(apiKey, [
+      const result = await callGroq(SHARED_GROQ_API_KEY, [
         { role: 'system', content: systemPrompt },
         ...newMessages.map((m) => ({ role: m.role, content: m.content })),
       ]);
