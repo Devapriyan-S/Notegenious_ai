@@ -208,18 +208,23 @@ def verify_otp(body: OTPVerifyRequest):
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest):
+    import traceback
+    print(f"LOGIN ATTEMPT for email: {body.email}")
     try:
         with get_db() as conn:
+            print("DB connection obtained")
             cur = conn.cursor()
             cur.execute("SELECT * FROM backend_users WHERE email = %s", (body.email,))
+            print("Query executed")
             user = cur.fetchone()
+            print(f"User found: {user is not None}")
     except Exception as e:
-        import traceback
         print(f"LOGIN ERROR: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(str(user["id"]))
+    print(f"LOGIN SUCCESS for email: {body.email}")
     return TokenResponse(
         access_token=token,
         user=UserResponse(

@@ -81,3 +81,17 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.on_event("startup")
+async def test_db_connection():
+    import traceback
+    from database import get_db
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            result = cur.fetchone()
+            print(f"DATABASE CONNECTION OK: {result}")
+    except Exception:
+        print(f"DATABASE CONNECTION FAILED: {traceback.format_exc()}")
