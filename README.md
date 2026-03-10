@@ -1,1 +1,0 @@
-# Notegenious_ai
