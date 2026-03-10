@@ -1,0 +1,26 @@
+name: Deploy Notification
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deployment summary
+        run: |
+          echo "=================================================="
+          echo "  NoteGenius AI — Deployment triggered"
+          echo "=================================================="
+          echo "  Commit : ${{ github.sha }}"
+          echo "  Message: ${{ github.event.head_commit.message }}"
+          echo "  Author : ${{ github.event.head_commit.author.name }}"
+          echo "  Time   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=================================================="
+          echo "  Frontend → Vercel auto-deploy in progress"
+          echo "  Backend  → Render auto-deploy in progress"
+          echo "=================================================="
