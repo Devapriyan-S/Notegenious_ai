@@ -26,6 +26,25 @@ function formatNoteAsTxt(title: string, content: string): string {
 
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
 
+function playBeep(type: 'start' | 'stop') {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    // start: rising tone (800Hz), stop: falling tone (400Hz)
+    osc.frequency.value = type === 'start' ? 800 : 400;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+    osc.onended = () => ctx.close();
+  } catch {
+    // Audio not supported — silent fail
+  }
+}
+
 export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onShare }: EditorProps) {
   const isDark = theme === 'dark';
 
@@ -79,6 +98,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
 
     // Stop recording → triggers onstop which sends audio to Whisper
     if (speechState === 'listening') {
+      playBeep('stop');
       mediaRecorderRef.current?.stop();
       return;
     }
@@ -154,9 +174,23 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
       }
     };
 
+    playBeep('start');
     recorder.start();
     setSpeechState('listening');
   }, [speechState]);
+
+  // Global keyboard shortcut: Ctrl+Shift+V to toggle speech
+  useEffect(() => {
+    if (readOnly) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+        e.preventDefault();
+        toggleSpeech();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [readOnly, toggleSpeech]);
 
   // ── Autocomplete helpers ─────────────────────────────────────────────────────
   const tryLocalMath = (text: string): number | null => {
@@ -352,12 +386,19 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
           {!readOnly && (
             <button
               onClick={toggleSpeech}
-              aria-label={
+              title={
                 speechState === 'listening'
-                  ? 'Stop listening'
+                  ? 'Stop listening (Ctrl+Shift+V)'
                   : speechState === 'processing'
                   ? 'Processing speech...'
-                  : 'Start speech-to-text'
+                  : 'Speech to text (Ctrl+Shift+V)'
+              }
+              aria-label={
+                speechState === 'listening'
+                  ? 'Stop listening (Ctrl+Shift+V)'
+                  : speechState === 'processing'
+                  ? 'Processing speech...'
+                  : 'Speech to text (Ctrl+Shift+V)'
               }
               disabled={speechState === 'processing'}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -506,7 +547,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
                 isDark ? 'text-red-400/70' : 'text-red-500/70'
               }`}
             >
-              Recording... click the mic button to stop and transcribe.
+              Recording... press Ctrl+Shift+V or click Stop to transcribe.
             </div>
           )}
 
