@@ -39,11 +39,24 @@ app.add_middleware(
 # It must be added AFTER CORSMiddleware so it runs as the outermost layer.
 @app.middleware("http")
 async def add_cors_on_error(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Origin, X-Requested-With, X-HTTP-Method-Override"
-    return response
+    try:
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Origin, X-Requested-With, X-HTTP-Method-Override"
+        return response
+    except Exception:
+        from fastapi.responses import JSONResponse
+        import traceback
+        print(f"UNHANDLED EXCEPTION: {traceback.format_exc()}")
+        response = JSONResponse(
+            {"detail": "Internal server error"},
+            status_code=500
+        )
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Origin, X-Requested-With, X-HTTP-Method-Override"
+        return response
 
 
 # Explicit catch-all OPTIONS handler so that CORS preflight requests for any
