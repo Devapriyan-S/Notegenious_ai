@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Download, Trash2, FileText, Loader2, Share2, Eye } from 'lucide-react';
+import { Download, Trash2, FileText, Loader2, Share2, Eye, Mic, MicOff } from 'lucide-react';
 import { Note, Theme } from '../page';
 import ShareModal from './ShareModal';
 
@@ -32,6 +32,28 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
   // ── Share modal state ─────────────────────────────────────────────────────────
   const [showShareModal, setShowShareModal] = useState(false);
 
+  // ── Speech-to-text state ─────────────────────────────────────────────────────
+  const [speechState, setSpeechState] = useState<'idle' | 'listening' | 'processing'>('idle');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const noteContentRef = useRef<string>('');
+  // Always-fresh refs so async handlers never use stale closures
+  const onUpdateRef = useRef(onUpdate);
+  const noteIdRef = useRef(note?.id ?? '');
+  useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
+  useEffect(() => { noteIdRef.current = note?.id ?? ''; }, [note?.id]);
+
+  // Stop mic stream on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
   // ── Autocomplete state ───────────────────────────────────────────────────────
   const [suggestion, setSuggestion] = useState('');
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
@@ -50,6 +72,91 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     a.click();
     URL.revokeObjectURL(url);
   }, [note]);
+
+  // ── Speech-to-text handler (MediaRecorder + Groq Whisper) ───────────────────
+  const toggleSpeech = useCallback(async () => {
+    if (speechState === 'processing') return;
+
+    // Stop recording → triggers onstop which sends audio to Whisper
+    if (speechState === 'listening') {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    if (!noteIdRef.current) return;
+
+    const apiKey = typeof window !== 'undefined' ? localStorage.getItem('groq_api_key') : null;
+    if (!apiKey) {
+      alert('Please add your Groq API key in Settings to use speech-to-text.');
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert('Microphone access is not supported in this browser.');
+      return;
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      alert('Microphone access denied. Please allow microphone access in your browser.');
+      return;
+    }
+
+    streamRef.current = stream;
+    audioChunksRef.current = [];
+    const baseContent = noteContentRef.current;
+
+    const recorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+
+      const chunks = audioChunksRef.current;
+      if (chunks.length === 0) {
+        setSpeechState('idle');
+        return;
+      }
+
+      setSpeechState('processing');
+      const mimeType = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(chunks, { type: mimeType });
+      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+
+      const formData = new FormData();
+      formData.append('file', blob, `audio.${ext}`);
+      formData.append('model', 'whisper-large-v3-turbo');
+      formData.append('language', 'en');
+
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: formData,
+        });
+        const data = await res.json();
+        const text = (data?.text ?? '').trim();
+        if (text) {
+          const sep = baseContent && !baseContent.endsWith(' ') && !baseContent.endsWith('\n') ? ' ' : '';
+          onUpdateRef.current(noteIdRef.current, { content: baseContent + sep + text });
+        }
+      } catch {
+        alert('Failed to transcribe audio. Please check your Groq API key and try again.');
+      } finally {
+        setSpeechState('idle');
+      }
+    };
+
+    recorder.start();
+    setSpeechState('listening');
+  }, [speechState]);
 
   // ── Autocomplete helpers ─────────────────────────────────────────────────────
   const tryLocalMath = (text: string): number | null => {
@@ -169,6 +276,11 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     [suggestion, note, onUpdate, readOnly]
   );
 
+  // Keep noteContentRef in sync so the speech onresult closure never reads stale content
+  useEffect(() => {
+    noteContentRef.current = note?.content ?? '';
+  }, [note?.content]);
+
   // Clear suggestion when switching notes
   useEffect(() => {
     setSuggestion('');
@@ -236,6 +348,46 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Mic / Speech-to-text — only for editable notes */}
+          {!readOnly && (
+            <button
+              onClick={toggleSpeech}
+              aria-label={
+                speechState === 'listening'
+                  ? 'Stop listening'
+                  : speechState === 'processing'
+                  ? 'Processing speech...'
+                  : 'Start speech-to-text'
+              }
+              disabled={speechState === 'processing'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                speechState === 'listening'
+                  ? 'bg-red-500/20 border border-red-500/40 text-red-400 animate-pulse'
+                  : speechState === 'processing'
+                  ? isDark
+                    ? 'bg-white/5 border border-white/10 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                  : isDark
+                  ? 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/10'
+                  : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-200'
+              }`}
+            >
+              {speechState === 'processing' ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  Transcribing...
+                </>
+              ) : speechState === 'listening' ? (
+                <>
+                  <MicOff size={13} />
+                  Stop
+                </>
+              ) : (
+                <Mic size={13} />
+              )}
+            </button>
+          )}
+
           {/* Save as TXT */}
           <button
             onClick={handleSaveAsTxt}
@@ -343,6 +495,18 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
                 Esc
               </kbd>
               <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>to dismiss</span>
+            </div>
+          )}
+
+          {/* Speech recording indicator */}
+          {!readOnly && speechState === 'listening' && (
+            <div
+              aria-live="polite"
+              className={`absolute bottom-10 left-0 right-0 px-2 py-1 text-sm italic pointer-events-none z-10 ${
+                isDark ? 'text-red-400/70' : 'text-red-500/70'
+              }`}
+            >
+              Recording... click the mic button to stop and transcribe.
             </div>
           )}
 

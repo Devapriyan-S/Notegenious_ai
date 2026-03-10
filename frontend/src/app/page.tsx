@@ -18,6 +18,7 @@ import {
   apiLockNote,
   apiGetSharedNotes,
   apiUpdateSharedNote,
+  apiUpdateProfile,
 } from '@/lib/api';
 import type { ApiUser, ApiNote, ApiSharedNote } from '@/lib/api';
 
@@ -176,6 +177,10 @@ export default function Home() {
     apiGetMe()
       .then((user) => {
         setApiUser(user);
+        if (user && user.groq_api_key) {
+          localStorage.setItem('groq_api_key', user.groq_api_key);
+          setApiKey(user.groq_api_key);
+        }
         setAuthLoading(false);
       })
       .catch(() => {
@@ -335,7 +340,10 @@ export default function Home() {
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKey(key);
     localStorage.setItem('groq_api_key', key);
-  }, []);
+    if (apiUser) {
+      apiUpdateProfile({ groq_api_key: key }).catch(console.error);
+    }
+  }, [apiUser]);
 
   const handleApplyAIResult = useCallback(
     (result: string, mode: 'replace' | 'append') => {

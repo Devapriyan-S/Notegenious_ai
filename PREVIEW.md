@@ -1,5 +1,5 @@
 # NoteGenius AI — Contributor Preview
-
+@
 This document is a complete technical reference for contributors. It covers everything about the project: what it is, how it works, the full folder structure, every component, every backend endpoint, the database schema, how to run it locally, and the CI/CD workflow. Read this before opening a pull request.
 
 ---
