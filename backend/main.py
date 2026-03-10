@@ -14,17 +14,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS — allow Next.js frontend
+# CORS — allow all origins so the Vercel frontend can reach the Render backend.
+# For a public note-taking app this is safe. If you later want to restrict to
+# specific domains, replace ["*"] with a list of your Vercel URLs and keep
+# allow_credentials=False (credentials + wildcard is not permitted by browsers).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        os.getenv("FRONTEND_URL", "http://localhost:3001"),
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:9000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

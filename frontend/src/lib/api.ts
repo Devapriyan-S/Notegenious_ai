@@ -1,7 +1,7 @@
-const API_URL =
-  (typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL
-    : undefined) ?? 'http://localhost:9000';
+// DEPLOYMENT: Set NEXT_PUBLIC_API_URL in Vercel → Project Settings → Environment Variables
+// to your Render backend URL, e.g. https://notegenious-backend.onrender.com
+// Without this env var the app falls back to localhost and ALL API calls will fail in production.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:9000';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
