@@ -47,8 +47,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         msg.toLowerCase().includes('load failed')
       ) {
         setError(
-          'Cannot connect to the server. Make sure the Python backend is running: ' +
-          'cd backend && uvicorn main:app --reload --port 9000'
+          'Cannot connect to the server. Please try again in a moment.'
         );
       } else {
         setError(msg);

@@ -1,7 +1,8 @@
 // DEPLOYMENT: Set NEXT_PUBLIC_API_URL in Vercel → Project Settings → Environment Variables
-// to your Render backend URL, e.g. https://notegenious-backend.onrender.com
-// Without this env var the app falls back to localhost and ALL API calls will fail in production.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:9000';
+// to your Render backend URL: https://notegenious-ai.onrender.com
+// The fallback below points to the production Render backend so the app works even if the
+// env var is missing in Vercel.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://notegenious-ai.onrender.com';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
