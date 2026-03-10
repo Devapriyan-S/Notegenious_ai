@@ -15,6 +15,7 @@
 5. [Environment Variables](#5-environment-variables)
 6. [Deployment](#6-deployment)
 7. [Development Setup](#7-development-setup)
+8. [CI/CD Pipeline](#8-cicd-pipeline)
 
 ---
 
@@ -306,6 +307,56 @@ The backend API will be available at `http://localhost:8000`.
 cd frontend
 npm run test
 ```
+
+---
+
+## 8. CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration. Three workflows run automatically on every push and pull request to the `main` branch.
+
+### Overview
+
+- GitHub Actions performs automated checks on every push to `main` and on all pull requests targeting `main`.
+- Vercel automatically builds and deploys the frontend whenever a push lands on `main`.
+- Render automatically builds and deploys the backend whenever a push lands on `main`.
+- No manual deployment steps are required for either platform.
+
+### Workflows
+
+#### Frontend CI — `.github/workflows/frontend-ci.yml`
+
+Triggers on push or pull request to `main` when files inside `frontend/` change.
+
+| Step | Command | Purpose |
+|---|---|---|
+| Install dependencies | `npm ci` | Clean install from lockfile |
+| TypeScript check | `npx tsc --noEmit` | Catch type errors before build |
+| Lint | `npm run lint` | ESLint via Next.js lint config |
+| Build | `npm run build` | Verify the production build succeeds |
+
+#### Backend CI — `.github/workflows/backend-ci.yml`
+
+Triggers on push or pull request to `main` when files inside `backend/` change.
+
+| Step | Command | Purpose |
+|---|---|---|
+| Install dependencies | `pip install -r requirements.txt` | Install all Python packages |
+| Install flake8 | `pip install flake8` | Linter not included in requirements |
+| Syntax check | `python -m py_compile` | Verify all `.py` files parse without errors |
+| Lint | `flake8 --max-line-length=120 --ignore=E501,W503,E402` | Style and error lint |
+
+#### Deploy Notification — `.github/workflows/deploy-notify.yml`
+
+Triggers on every push to `main`. Prints a deployment summary to the Actions log, including commit SHA, commit message, author name, and timestamp. Actual deployment is handled automatically by Vercel and Render.
+
+### Automatic Deployments
+
+| Service | Platform | Trigger |
+|---|---|---|
+| Frontend | Vercel | Every push to `main` (root directory: `frontend/`) |
+| Backend | Render | Every push to `main` (root directory: `backend/`) |
+
+No secrets or deploy hooks are required for Vercel. Render deployment is triggered via its native GitHub integration configured in the Render dashboard.
 
 ---
 
