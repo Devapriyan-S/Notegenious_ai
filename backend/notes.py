@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 import uuid
+import traceback
 
 from database import get_db
 from models import NoteCreate, NoteUpdate, NoteLockRequest, NoteUnlockRequest, NoteResponse, ShareNoteRequest, ShareNoteResponse, SharedNoteResponse, SharedNoteUpdate
@@ -152,6 +153,7 @@ def share_note(note_id: str, body: ShareNoteRequest, user_id: str = Depends(get_
             send_invite_email(body.email)
         except Exception as e:
             print(f"[INVITE] Failed to send invite to {body.email}: {e}")
+            traceback.print_exc()
         return ShareNoteResponse(invited=True)
 
     # User exists — validate permission
