@@ -248,6 +248,8 @@ Notegenious_ai/
 |   +-- README.md                     Docs directory readme
 |
 +-- .github/                          GitHub-specific config
+
+
 |   +-- workflows/
 |   |   +-- ci.yml                    Lint, test, and build on every push to main/develop and on PRs
 |   |   +-- deploy.yml                Build and deploy to GitHub Pages on push to main

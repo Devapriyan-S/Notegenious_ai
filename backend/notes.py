@@ -5,7 +5,7 @@ import traceback
 
 from database import get_db
 from models import NoteCreate, NoteUpdate, NoteLockRequest, NoteUnlockRequest, NoteResponse, ShareNoteRequest, ShareNoteResponse, SharedNoteResponse, SharedNoteUpdate
-from auth import get_current_user_id, send_invite_email
+from auth import get_current_user_id, send_invite_email, send_share_notification_email
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -137,6 +137,7 @@ def delete_note(note_id: str, user_id: str = Depends(get_current_user_id)):
 
 @router.post("/{note_id}/share", response_model=ShareNoteResponse)
 def share_note(note_id: str, body: ShareNoteRequest, user_id: str = Depends(get_current_user_id)):
+    print(f"[SHARE] share_note called — note_id={note_id}, requester={user_id}, target_email={body.email}")
     # Verify caller owns this note
     with get_db() as conn:
         cur = conn.cursor()
@@ -146,6 +147,7 @@ def share_note(note_id: str, body: ShareNoteRequest, user_id: str = Depends(get_
         # Check if target email is registered
         cur.execute("SELECT id FROM backend_users WHERE email = %s", (body.email,))
         target_user = cur.fetchone()
+        print(f"[SHARE] target_user lookup for email: {body.email}, found: {target_user}")
 
     if not target_user:
         # User not registered — send invitation email
@@ -177,6 +179,25 @@ def share_note(note_id: str, body: ShareNoteRequest, user_id: str = Depends(get_
             (share_id, note_id, user_id, target_user_id, body.permission)
         )
         row = cur.fetchone()
+
+    # Send notification email to the shared user
+    try:
+        with get_db() as conn2:
+            cur2 = conn2.cursor()
+            cur2.execute("SELECT title FROM backend_notes WHERE id = %s", (note_id,))
+            note_row = cur2.fetchone()
+            cur2.execute("SELECT email FROM backend_users WHERE id = %s", (user_id,))
+            owner_row = cur2.fetchone()
+        if note_row and owner_row:
+            send_share_notification_email(
+                to_email=body.email,
+                owner_email=owner_row["email"],
+                note_title=note_row["title"] or "Untitled",
+                permission=row["permission"]
+            )
+    except Exception:
+        import traceback as _tb
+        _tb.print_exc()
 
     return ShareNoteResponse(shared=True, permission=row["permission"])
 
