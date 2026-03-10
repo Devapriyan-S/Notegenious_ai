@@ -48,7 +48,7 @@ def send_otp_email(to_email: str, otp: str) -> None:
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "NoteGenius AI — Email Verification Code"
-    msg["From"] = formataddr(("Notegenious_AI", smtp_from))
+    msg["From"] = formataddr(("Notegenious AI", smtp_from))
     msg["To"] = to_email
 
     text_body = f"Your NoteGenius AI verification code is: {otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email."
@@ -85,7 +85,7 @@ def send_invite_email(to_email: str) -> None:
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "You've been invited to NoteGenius AI"
-    msg["From"] = formataddr(("Notegenious_AI", smtp_from))
+    msg["From"] = formataddr(("Notegenious AI", smtp_from))
     msg["To"] = to_email
 
     text_body = (
@@ -109,6 +109,7 @@ def send_invite_email(to_email: str) -> None:
         server.starttls()
         server.login(smtp_user, smtp_password)
         server.sendmail(smtp_from, to_email, msg.as_string())
+    print(f"[EMAIL] Invite sent to {to_email}")
 
 
 def hash_password(password: str) -> str:
