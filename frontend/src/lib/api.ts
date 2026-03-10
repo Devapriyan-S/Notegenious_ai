@@ -25,7 +25,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  // Abort after 15 seconds so callers get a clear network error instead of hanging forever.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    // TypeError: Failed to fetch  /  TypeError: Load failed  /  AbortError
+    throw new Error('Cannot connect to the server. Please try again in a moment.');
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Request failed' }));
     throw new Error((err as { detail?: string }).detail || 'Request failed');

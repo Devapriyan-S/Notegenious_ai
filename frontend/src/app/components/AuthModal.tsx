@@ -40,18 +40,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
-      if (
-        msg.toLowerCase().includes('fetch') ||
-        msg.toLowerCase().includes('network') ||
-        msg.toLowerCase().includes('failed to fetch') ||
-        msg.toLowerCase().includes('load failed')
-      ) {
-        setError(
-          'Cannot connect to the server. Please try again in a moment.'
-        );
-      } else {
-        setError(msg);
-      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
