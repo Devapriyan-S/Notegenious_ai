@@ -11,7 +11,6 @@ import {
   Lock,
   Unlock,
   LogOut,
-  LogIn,
   Share2,
   Eye,
   Pencil,
@@ -139,60 +138,6 @@ export default function Sidebar({
           />
         </div>
       </div>
-
-      {/* User info section (shown whenever a user is logged in) */}
-      {session && (
-        <div
-          className={`mx-2 mt-2 mb-1 p-2 rounded-xl flex items-center gap-2 ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}
-        >
-          {session ? (
-            <>
-              {/* Avatar */}
-              <div className="flex-shrink-0">
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarUrl}
-                    alt={displayName}
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                    {initials}
-                  </div>
-                )}
-              </div>
-              {/* Name / email */}
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs font-medium truncate ${textPrimary}`}>
-                  {displayName}
-                </p>
-                {userEmail && (
-                  <p className={`text-xs truncate ${textSecondary}`}>
-                    {userEmail}
-                  </p>
-                )}
-              </div>
-              {/* Logout */}
-              <button
-                onClick={onLogout}
-                title="Sign out"
-                className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${isDark ? 'text-slate-500 hover:text-red-400 hover:bg-red-400/10' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
-              >
-                <LogOut size={14} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={onShowAuth}
-              className="flex items-center gap-2 text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors"
-            >
-              <LogIn size={14} />
-              Sign in to sync notes
-            </button>
-          )}
-        </div>
-      )}
 
       {/* New Note Button */}
       <div className="p-3 flex-shrink-0">
@@ -395,6 +340,50 @@ export default function Sidebar({
           </div>
         )}
       </div>
+
+      {/* User card — fixed at bottom */}
+      {session && (
+        <div className={`flex-shrink-0 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+          <div
+            className={`mx-2 my-2 p-2 rounded-xl flex items-center gap-2 ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}
+          >
+            {/* Avatar */}
+            <div className="flex-shrink-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                  {initials}
+                </div>
+              )}
+            </div>
+            {/* Name / email */}
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-medium truncate ${textPrimary}`}>
+                {displayName}
+              </p>
+              {userEmail && (
+                <p className={`text-xs truncate ${textSecondary}`}>
+                  {userEmail}
+                </p>
+              )}
+            </div>
+            {/* Logout */}
+            <button
+              onClick={onLogout}
+              title="Sign out"
+              className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${isDark ? 'text-slate-500 hover:text-red-400 hover:bg-red-400/10' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

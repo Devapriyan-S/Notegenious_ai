@@ -40,7 +40,6 @@ const QUICK_ACTIONS = [
   { id: 'summarize', label: 'Summarize', icon: '📝', prompt: 'Summarize this note as bullet points:', mode: 'append' as AIResultMode },
   { id: 'expand', label: 'Expand', icon: '📖', prompt: 'Expand this note into detailed paragraphs:', mode: 'append' as AIResultMode },
   { id: 'grammar', label: 'Fix Grammar', icon: '✏️', prompt: 'Fix grammar and spelling in this text, return only the corrected text:', mode: 'replace' as AIResultMode, model: MODEL_FAST },
-  { id: 'keypoints', label: 'Key Points', icon: '🔑', prompt: 'Extract numbered key points and action items from this note:', mode: 'append' as AIResultMode },
   { id: 'eli5', label: 'ELI5', icon: '🧒', prompt: 'Explain this note in simple terms that anyone can understand:', mode: 'append' as AIResultMode },
 ];
 
@@ -89,8 +88,11 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [showRewrite, setShowRewrite] = useState(false);
-  const [showTranslate, setShowTranslate] = useState(false);
+  const [showRewrite, setShowRewrite] = useState(true);
+  const [showTranslate, setShowTranslate] = useState(true);
+  const [showMailForm, setShowMailForm] = useState(false);
+  const [mailManagerName, setMailManagerName] = useState('');
+  const [mailLoading, setMailLoading] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +144,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
     if (!content) return;
     setLoading(true);
     setAiResult('');
-    setShowRewrite(false);
+    setShowMailForm(false);
     try {
       const result = await callGroq(SHARED_GROQ_API_KEY, [{ role: 'user', content: `${option.prompt}\n\n${content}` }]);
       setAiResult(result);
@@ -151,6 +153,56 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
       setError((e as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMailGenerate = async () => {
+    const content = checkApiAndNote();
+    if (!content) return;
+    const managerName = mailManagerName.trim() || 'Manager';
+    setMailLoading(true);
+    setAiResult('');
+    try {
+      const prompt = `Rewrite the following note as a professional email:
+
+Subject: [generate a suitable subject from the content]
+
+Hi ${managerName},
+
+[Rewrite the note content in professional, formal tone as email body]
+
+Best regards,
+[User's first name or "Team"]
+
+Note content:
+${content}`;
+      const res = await fetch(GROQ_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${SHARED_GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: MODEL_FAST,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 500,
+          temperature: 0.4,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message || `API error ${res.status}`);
+      }
+      const data = await res.json() as { choices: { message: { content: string } }[] };
+      const result = data.choices[0]?.message?.content ?? '';
+      setAiResult(result);
+      setAiMode('replace');
+      setShowMailForm(false);
+      setMailManagerName('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setMailLoading(false);
     }
   };
 
@@ -221,7 +273,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
             <Sparkles size={14} className="text-white" />
           </div>
           <span className={`font-semibold text-sm ${textPrimary}`}>AI Assistant</span>
-          {loading && <Loader2 size={14} className="text-violet-400 animate-spin ml-auto" />}
+          {(loading || mailLoading) && <Loader2 size={14} className="text-violet-400 animate-spin ml-auto" />}
         </div>
       </div>
 
@@ -274,21 +326,59 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
             {showRewrite ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
           {showRewrite && (
-            <div className="mt-1 grid grid-cols-2 gap-1">
-              {REWRITE_OPTIONS.map((opt) => (
+            <div className="mt-1">
+              <div className="grid grid-cols-2 gap-1">
+                {REWRITE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleRewrite(opt)}
+                    disabled={loading}
+                    className={`px-2 py-1.5 rounded-lg text-xs transition-all disabled:opacity-40 ${
+                      isDark
+                        ? 'bg-white/5 border border-white/8 text-slate-300 hover:bg-indigo-500/20 hover:border-indigo-500/30 hover:text-indigo-200'
+                        : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                {/* Mail option */}
                 <button
-                  key={opt.id}
-                  onClick={() => handleRewrite(opt)}
+                  onClick={() => setShowMailForm((v) => !v)}
                   disabled={loading}
                   className={`px-2 py-1.5 rounded-lg text-xs transition-all disabled:opacity-40 ${
-                    isDark
-                      ? 'bg-white/5 border border-white/8 text-slate-300 hover:bg-indigo-500/20 hover:border-indigo-500/30 hover:text-indigo-200'
-                      : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700'
+                    showMailForm
+                      ? isDark
+                        ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-200'
+                        : 'bg-indigo-50 border border-indigo-200 text-indigo-700'
+                      : isDark
+                        ? 'bg-white/5 border border-white/8 text-slate-300 hover:bg-indigo-500/20 hover:border-indigo-500/30 hover:text-indigo-200'
+                        : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700'
                   }`}
                 >
-                  {opt.label}
+                  Mail
                 </button>
-              ))}
+              </div>
+              {/* Mail inline form */}
+              {showMailForm && (
+                <div className={`mt-2 p-2 rounded-lg border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                  <input
+                    type="text"
+                    value={mailManagerName}
+                    onChange={(e) => setMailManagerName(e.target.value)}
+                    placeholder="Manager's name"
+                    className={`w-full px-2 py-1.5 rounded-lg border text-xs mb-2 ${isDark ? 'bg-white/5 border-white/10 text-slate-200 placeholder-slate-500 focus:border-violet-500/50' : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-violet-400'} outline-none transition-colors`}
+                  />
+                  <button
+                    onClick={handleMailGenerate}
+                    disabled={mailLoading || loading}
+                    className="w-full py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    {mailLoading ? <Loader2 size={11} className="animate-spin" /> : null}
+                    Generate
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -329,7 +419,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
         </div>
 
         {/* AI Result Box */}
-        {(loading || aiResult) && (
+        {(loading || mailLoading || aiResult) && (
           <div className={`rounded-xl border p-3 ${cardBg}`}>
             <div className="flex items-center justify-between mb-2">
               <span className={`text-xs font-semibold ${isDark ? 'text-violet-300' : 'text-violet-600'}`}>
@@ -360,7 +450,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
                 </button>
               </div>
             </div>
-            {loading ? (
+            {(loading || mailLoading) ? (
               <div className="flex items-center gap-2 py-4 justify-center">
                 <Loader2 size={16} className="text-violet-400 animate-spin" />
                 <span className={`text-xs ${textSecondary}`}>Generating...</span>
