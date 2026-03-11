@@ -72,33 +72,3 @@ class NoteResponse(BaseModel):
     word_count: int
     created_at: datetime
     updated_at: datetime
-
-# Share models
-class ShareNoteRequest(BaseModel):
-    email: EmailStr
-    permission: Optional[str] = None  # "readable" or "editable"; None when sending invite
-
-class ShareNoteResponse(BaseModel):
-    invited: bool = False
-    shared: bool = False
-    permission: Optional[str] = None
-
-class SharedNoteResponse(BaseModel):
-    share_id: str
-    note_id: str
-    owner_id: str
-    permission: str
-    title: str
-    content: str
-    is_locked: bool
-    lock_hint: Optional[str]
-    is_pinned: bool
-    color: str
-    tags: List[str]
-    word_count: int
-    created_at: datetime
-    updated_at: datetime
-
-class SharedNoteUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None

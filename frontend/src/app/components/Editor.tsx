@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Download, Trash2, FileText, Loader2, Share2, Eye, Mic, MicOff } from 'lucide-react';
+import { Download, Trash2, FileText, Loader2, Eye, Mic, MicOff } from 'lucide-react';
 import { Note, Theme } from '../page';
-import ShareModal from './ShareModal';
 import { SHARED_GROQ_API_KEY } from '@/lib/config';
 
 interface EditorProps {
@@ -12,7 +11,6 @@ interface EditorProps {
   readOnly?: boolean;
   onUpdate: (id: string, updates: Partial<Pick<Note, 'title' | 'content'>>) => void;
   onDelete: (id: string) => void;
-  onShare?: (noteId: string) => void;
 }
 
 // Sanitize note title for use as a filename
@@ -46,13 +44,10 @@ function playBeep(type: 'start' | 'stop') {
   }
 }
 
-export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onShare }: EditorProps) {
+export default function Editor({ note, theme, readOnly, onUpdate, onDelete }: EditorProps) {
   const isDark = theme === 'dark';
 
-  // ── Share modal state ─────────────────────────────────────────────────────────
-  const [showShareModal, setShowShareModal] = useState(false);
-
-  // ── Speech-to-text state ─────────────────────────────────────────────────────
+  // ── Speech-to-text state ─────────────────────────────────────────────────
   const [speechState, setSpeechState] = useState<'idle' | 'listening' | 'processing'>('idle');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -74,13 +69,13 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     };
   }, []);
 
-  // ── Autocomplete state ───────────────────────────────────────────────────────
+  // ── Autocomplete state ───────────────────────────────────────────────────
   const [suggestion, setSuggestion] = useState('');
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
   const suggestionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTextRef = useRef('');
 
-  // ── Save as TXT ──────────────────────────────────────────────────────────────
+  // ── Save as TXT ──────────────────────────────────────────────────────────
   const handleSaveAsTxt = useCallback(() => {
     if (!note) return;
     const text = formatNoteAsTxt(note.title || 'Untitled Note', note.content);
@@ -93,7 +88,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     URL.revokeObjectURL(url);
   }, [note]);
 
-  // ── Speech-to-text handler (MediaRecorder + Groq Whisper) ───────────────────
+  // ── Speech-to-text handler (MediaRecorder + Groq Whisper) ───────────────
   const toggleSpeech = useCallback(async () => {
     if (speechState === 'processing') return;
 
@@ -189,7 +184,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [readOnly, toggleSpeech]);
 
-  // ── Autocomplete helpers ─────────────────────────────────────────────────────
+  // ── Autocomplete helpers ─────────────────────────────────────────────────
   const tryLocalMath = (text: string): number | null => {
     try {
       const expr = text.replace(/=/g, '').replace(/x/gi, '*').trim();
@@ -234,7 +229,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     } else if (mathPattern.test(lastLine)) {
       prompt = `What is the result of: ${lastLine} Answer with just the number or expression.`;
     } else {
-      prompt = `Complete this text with the next 5-8 words only. Text: "${lastLine}" Continue naturally:`;
+      prompt = `Continue the following text with only the next 5-8 words. Do NOT repeat the input. Only output the continuation words: "${lastLine}"`;
     }
 
     try {
@@ -253,7 +248,15 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
         }),
       });
       const data = await res.json();
-      const result = data?.choices?.[0]?.message?.content?.trim() ?? '';
+      let result = data?.choices?.[0]?.message?.content?.trim() ?? '';
+
+      // Remove duplicate prefix — AI sometimes echoes back the input
+      const lastLineLower = lastLine.toLowerCase();
+      const resultLower = result.toLowerCase();
+      if (resultLower.startsWith(lastLineLower)) {
+        result = result.slice(lastLine.length).trimStart();
+      }
+
       if (text === lastTextRef.current) {
         setSuggestion(result);
       }
@@ -318,7 +321,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     if (suggestionTimeoutRef.current) clearTimeout(suggestionTimeoutRef.current);
   }, [note?.id]);
 
-  // ── Style helpers ────────────────────────────────────────────────────────────
+  // ── Style helpers ────────────────────────────────────────────────────────
   const panelBg = isDark
     ? 'bg-gradient-to-b from-[#0f0f1a] to-[#0c0c18]'
     : 'bg-white';
@@ -331,7 +334,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     ? 'bg-transparent text-slate-300 placeholder-slate-600 resize-none'
     : 'bg-transparent text-slate-700 placeholder-slate-400 resize-none';
 
-  // ── Empty state ──────────────────────────────────────────────────────────────
+  // ── Empty state ──────────────────────────────────────────────────────────
   if (!note) {
     return (
       <div className={`h-full flex flex-col items-center justify-center ${panelBg}`}>
@@ -350,7 +353,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
     );
   }
 
-  // ── Main editor ──────────────────────────────────────────────────────────────
+  // ── Main editor ──────────────────────────────────────────────────────────
   return (
     <div className={`flex flex-col h-full ${panelBg}`}>
       {/* Toolbar */}
@@ -438,22 +441,6 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
             <Download size={13} />
             <span className="hidden sm:inline ml-1">Save .txt</span>
           </button>
-
-          {/* Share — only shown for own notes */}
-          {onShare && !readOnly && (
-            <button
-              onClick={() => setShowShareModal(true)}
-              aria-label="Share this note"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                isDark
-                  ? 'bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/10'
-                  : 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-200'
-              }`}
-            >
-              <Share2 size={13} />
-              <span className="hidden sm:inline ml-1">Share</span>
-            </button>
-          )}
 
           {/* Delete — hidden for shared notes */}
           {!readOnly && (
@@ -558,15 +545,6 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
           )}
         </div>
       </div>
-
-      {/* Share Modal */}
-      {showShareModal && (
-        <ShareModal
-          noteId={note.id}
-          theme={theme}
-          onClose={() => setShowShareModal(false)}
-        />
-      )}
     </div>
   );
 }

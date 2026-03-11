@@ -179,41 +179,6 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
-// Share
-export async function apiCheckEmail(email: string): Promise<{ exists: boolean }> {
-  return request<{ exists: boolean }>(
-    `/api/auth/check-email?email=${encodeURIComponent(email)}`
-  );
-}
-
-export async function apiShareNote(
-  noteId: string,
-  email: string,
-  permission?: string
-): Promise<{ invited: boolean; shared: boolean; permission?: string }> {
-  return request<{ invited: boolean; shared: boolean; permission?: string }>(
-    `/api/notes/${noteId}/share`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ email, permission: permission ?? null }),
-    }
-  );
-}
-
-export async function apiGetSharedNotes(): Promise<ApiSharedNote[]> {
-  return request<ApiSharedNote[]>('/api/notes/shared');
-}
-
-export async function apiUpdateSharedNote(
-  noteId: string,
-  updates: Partial<{ title: string; content: string }>
-): Promise<ApiNote> {
-  return request<ApiNote>(`/api/notes/${noteId}/shared-content`, {
-    method: 'PUT',
-    body: JSON.stringify(updates),
-  });
-}
-
 // Types
 export interface ApiUser {
   id: string;
@@ -227,23 +192,6 @@ export interface ApiUser {
 export interface ApiNote {
   id: string;
   user_id: string;
-  title: string;
-  content: string;
-  is_locked: boolean;
-  lock_hint: string | null;
-  is_pinned: boolean;
-  color: string;
-  tags: string[];
-  word_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ApiSharedNote {
-  share_id: string;
-  note_id: string;
-  owner_id: string;
-  permission: string;
   title: string;
   content: string;
   is_locked: boolean;

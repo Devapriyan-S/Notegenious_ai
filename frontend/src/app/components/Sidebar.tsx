@@ -11,11 +11,8 @@ import {
   Lock,
   Unlock,
   LogOut,
-  Share2,
-  Eye,
-  Pencil,
 } from 'lucide-react';
-import { Note, SharedNote, Theme } from '../page';
+import { Note, Theme } from '../page';
 import type { Session } from '@supabase/supabase-js';
 import { supabaseEnabled } from '@/lib/supabase';
 
@@ -38,10 +35,6 @@ interface SidebarProps {
   onRequestLock: (noteId: string) => void;
   onRequestUnlock: (noteId: string) => void;
   onShowAuth: () => void;
-  // Shared notes
-  sharedNotes: SharedNote[];
-  selectedSharedId: string | null;
-  onSelectSharedNote: (shareId: string) => void;
 }
 
 export default function Sidebar({
@@ -62,9 +55,6 @@ export default function Sidebar({
   onRequestLock,
   onRequestUnlock,
   onShowAuth,
-  sharedNotes,
-  selectedSharedId,
-  onSelectSharedNote,
 }: SidebarProps) {
   const [showApiInput, setShowApiInput] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -268,75 +258,6 @@ export default function Sidebar({
         {notes.length === 0 && (
           <div className={`text-center py-8 ${textSecondary} text-sm`}>
             No notes found
-          </div>
-        )}
-
-        {/* Shared with me section */}
-        {sharedNotes.length > 0 && (
-          <div className="mt-3">
-            <p
-              className={`text-xs font-semibold uppercase tracking-wider px-2 mb-2 ${textSecondary}`}
-            >
-              Shared with me ({sharedNotes.length})
-            </p>
-            {sharedNotes.map((sn) => (
-              <div
-                key={sn.share_id}
-                onClick={() => onSelectSharedNote(sn.share_id)}
-                className={`group relative mb-1 p-3 rounded-xl cursor-pointer transition-all ${
-                  selectedSharedId === sn.share_id
-                    ? isDark
-                      ? 'bg-gradient-to-r from-violet-600/20 to-indigo-600/20 border border-violet-500/30'
-                      : 'bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200'
-                    : isDark
-                      ? 'hover:bg-white/5 border border-transparent'
-                      : 'hover:bg-slate-100 border border-transparent'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <Share2 size={11} className="flex-shrink-0 text-violet-400" />
-                      <p
-                        className={`text-sm font-medium truncate ${
-                          selectedSharedId === sn.share_id
-                            ? isDark
-                              ? 'text-violet-200'
-                              : 'text-violet-700'
-                            : textPrimary
-                        }`}
-                      >
-                        {sn.title || 'Untitled Note'}
-                      </p>
-                    </div>
-                    <p className={`text-xs truncate mt-0.5 ${textSecondary}`}>
-                      {sn.content
-                        ? sn.content.slice(0, 50).replace(/\n/g, ' ') +
-                          (sn.content.length > 50 ? '...' : '')
-                        : 'Empty note'}
-                    </p>
-                  </div>
-                  <span
-                    className={`flex-shrink-0 flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
-                      sn.permission === 'editable'
-                        ? isDark
-                          ? 'bg-green-500/10 text-green-400'
-                          : 'bg-green-50 text-green-600'
-                        : isDark
-                          ? 'bg-amber-500/10 text-amber-400'
-                          : 'bg-amber-50 text-amber-600'
-                    }`}
-                  >
-                    {sn.permission === 'editable' ? (
-                      <Pencil size={10} />
-                    ) : (
-                      <Eye size={10} />
-                    )}
-                    {sn.permission === 'editable' ? 'Edit' : 'View'}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>

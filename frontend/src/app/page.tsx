@@ -6,7 +6,6 @@ import Editor from './components/Editor';
 import AIPanel from './components/AIPanel';
 import AuthModal from './components/AuthModal';
 import NoteLockModal from './components/NoteLockModal';
-import ShareModal from './components/ShareModal';
 import { FileText, Edit3, Sparkles } from 'lucide-react';
 import {
   apiGetMe,
@@ -16,11 +15,9 @@ import {
   apiUpdateNote,
   apiDeleteNote,
   apiLockNote,
-  apiGetSharedNotes,
-  apiUpdateSharedNote,
   apiUpdateProfile,
 } from '@/lib/api';
-import type { ApiUser, ApiNote, ApiSharedNote } from '@/lib/api';
+import type { ApiUser, ApiNote } from '@/lib/api';
 
 // ----------------------------------------------------------------
 // Local Note type (superset of original — backward-compatible)
@@ -40,26 +37,6 @@ export interface Note {
   tags?: string[];
   word_count?: number;
   user_id?: string;
-}
-
-// ----------------------------------------------------------------
-// SharedNote type
-// ----------------------------------------------------------------
-export interface SharedNote {
-  share_id: string;
-  note_id: string;
-  owner_id: string;
-  permission: string;
-  title: string;
-  content: string;
-  is_locked: boolean;
-  lock_hint: string | null;
-  is_pinned: boolean;
-  color: string;
-  tags: string[];
-  word_count: number;
-  createdAt: number;
-  updatedAt: number;
 }
 
 export type Theme = 'dark' | 'light';
@@ -91,25 +68,6 @@ function apiNoteToLocal(n: ApiNote): Note {
     tags: n.tags,
     word_count: n.word_count,
     user_id: n.user_id,
-  };
-}
-
-function apiSharedNoteToLocal(n: ApiSharedNote): SharedNote {
-  return {
-    share_id: n.share_id,
-    note_id: n.note_id,
-    owner_id: n.owner_id,
-    permission: n.permission,
-    title: n.title,
-    content: n.content,
-    is_locked: n.is_locked,
-    lock_hint: n.lock_hint,
-    is_pinned: n.is_pinned,
-    color: n.color,
-    tags: n.tags,
-    word_count: n.word_count,
-    createdAt: new Date(n.created_at).getTime(),
-    updatedAt: new Date(n.updated_at).getTime(),
   };
 }
 
@@ -165,12 +123,6 @@ export default function Home() {
     new Set()
   );
 
-  // Shared notes state
-  const [sharedNotes, setSharedNotes] = useState<SharedNote[]>([]);
-  const [selectedSharedId, setSelectedSharedId] = useState<string | null>(null);
-  const [shareNoteId, setShareNoteId] = useState<string | null>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-
   // Debounce ref for API saves
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -212,41 +164,7 @@ export default function Home() {
         }
       })
       .catch(console.error);
-
-    apiGetSharedNotes()
-      .then((rows) => setSharedNotes(rows.map(apiSharedNoteToLocal)))
-      .catch(console.error);
   }, [apiUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ----------------------------------------------------------------
-  // Deep-link: open a specific shared or own note from URL params
-  // Triggered by email links of the form /?note=<noteId>&shared=true
-  // ----------------------------------------------------------------
-  useEffect(() => {
-    if (notes.length === 0 && sharedNotes.length === 0) return;
-
-    const params = new URLSearchParams(window.location.search);
-    const noteId = params.get('note');
-    const isShared = params.get('shared') === 'true';
-
-    if (!noteId) return;
-
-    if (isShared) {
-      const found = sharedNotes.find((n) => n.note_id === noteId);
-      if (found) {
-        handleSelectSharedNote(found.share_id);
-        setMobilePanel('editor');
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    } else {
-      const found = notes.find((n) => n.id === noteId);
-      if (found) {
-        handleSelectNote(found.id);
-        setMobilePanel('editor');
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, [notes, sharedNotes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------------------------------------------
   // Fallback init (no user logged in): set selectedId
@@ -271,17 +189,10 @@ export default function Home() {
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null;
 
-  // Shared note derivations
-  const selectedSharedNote =
-    sharedNotes.find((n) => n.share_id === selectedSharedId) ?? null;
-  const isSharedNoteSelected = selectedSharedId !== null && selectedSharedNote !== null;
-  const sharedReadOnly = isSharedNoteSelected && selectedSharedNote.permission === 'readable';
-
   // ----------------------------------------------------------------
   // Note CRUD
   // ----------------------------------------------------------------
   const handleNewNote = useCallback(async () => {
-    setSelectedSharedId(null);
     if (apiUser) {
       try {
         const row = await apiCreateNote();
@@ -306,14 +217,7 @@ export default function Home() {
   }, [apiUser]);
 
   const handleSelectNote = useCallback((id: string) => {
-    setSelectedSharedId(null);
     setSelectedId(id);
-    setMobilePanel('editor');
-  }, []);
-
-  const handleSelectSharedNote = useCallback((shareId: string) => {
-    setSelectedId(null);
-    setSelectedSharedId(shareId);
     setMobilePanel('editor');
   }, []);
 
@@ -335,22 +239,6 @@ export default function Home() {
       }
     },
     [apiUser]
-  );
-
-  const handleUpdateSharedNote = useCallback(
-    (id: string, updates: Partial<Pick<Note, 'title' | 'content'>>) => {
-      // Optimistic update on shared notes list
-      setSharedNotes((prev) =>
-        prev.map((n) =>
-          n.note_id === id ? { ...n, ...updates, updatedAt: Date.now() } : n
-        )
-      );
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        apiUpdateSharedNote(id, updates).catch(console.error);
-      }, 2000);
-    },
-    []
   );
 
   const handleDeleteNote = useCallback(
@@ -407,14 +295,6 @@ export default function Home() {
     },
     [selectedId, apiUser]
   );
-
-  // ----------------------------------------------------------------
-  // Share handler
-  // ----------------------------------------------------------------
-  const handleShareNote = useCallback((noteId: string) => {
-    setShareNoteId(noteId);
-    setShowShareModal(true);
-  }, []);
 
   // ----------------------------------------------------------------
   // Note locking
@@ -514,8 +394,6 @@ export default function Home() {
     setApiUser(null);
     setNotes([makeLocalNote()]);
     setSelectedId(null);
-    setSelectedSharedId(null);
-    setSharedNotes([]);
     setSessionUnlocked(new Set());
   }, []);
 
@@ -551,25 +429,9 @@ export default function Home() {
   // Keep selectedNoteRef in sync for Ctrl+S handler
   selectedNoteRef.current = selectedNote;
 
-  // Derive the note to show in editor
-  const editorNote: Note | null = isSharedNoteSelected
-    ? selectedSharedNote
-      ? ({
-          id: selectedSharedNote.note_id,
-          title: selectedSharedNote.title,
-          content: selectedSharedNote.content,
-          createdAt: selectedSharedNote.createdAt,
-          updatedAt: selectedSharedNote.updatedAt,
-          is_locked: selectedSharedNote.is_locked,
-          lock_hint: selectedSharedNote.lock_hint,
-          is_pinned: selectedSharedNote.is_pinned,
-          color: selectedSharedNote.color,
-          tags: selectedSharedNote.tags,
-          word_count: selectedSharedNote.word_count,
-          user_id: selectedSharedNote.owner_id,
-        } as Note)
-      : null
-    : selectedNote?.is_locked && !sessionUnlocked.has(selectedNote.id)
+  // Derive the note to show in editor (hide locked notes)
+  const editorNote: Note | null =
+    selectedNote?.is_locked && !sessionUnlocked.has(selectedNote.id)
       ? null
       : selectedNote;
 
@@ -652,9 +514,6 @@ export default function Home() {
             onRequestLock={handleRequestLock}
             onRequestUnlock={handleRequestUnlock}
             onShowAuth={() => setShowAuthModal(true)}
-            sharedNotes={sharedNotes}
-            selectedSharedId={selectedSharedId}
-            onSelectSharedNote={handleSelectSharedNote}
           />
         )}
       </div>
@@ -665,7 +524,7 @@ export default function Home() {
           mobilePanel === 'editor' ? 'flex' : 'hidden'
         } md:flex flex-col`}
       >
-        {!isSharedNoteSelected && selectedNote?.is_locked && !sessionUnlocked.has(selectedNote.id) ? (
+        {selectedNote?.is_locked && !sessionUnlocked.has(selectedNote.id) ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <span className="text-3xl">&#128274;</span>
@@ -684,14 +543,8 @@ export default function Home() {
           <Editor
             note={editorNote}
             theme={theme}
-            readOnly={sharedReadOnly}
-            onUpdate={
-              isSharedNoteSelected && !sharedReadOnly
-                ? handleUpdateSharedNote
-                : handleUpdateNote
-            }
-            onDelete={isSharedNoteSelected ? () => {} : handleDeleteNote}
-            onShare={apiUser && !isSharedNoteSelected ? handleShareNote : undefined}
+            onUpdate={handleUpdateNote}
+            onDelete={handleDeleteNote}
           />
         )}
       </div>
@@ -800,18 +653,6 @@ export default function Home() {
           onConfirm={() => handleUnlockConfirm(lockModal.noteId)}
           onCancel={() => setLockModal({ open: false })}
           onRemoveLock={() => handleRemoveLock(lockModal.noteId)}
-        />
-      )}
-
-      {/* Share modal */}
-      {showShareModal && shareNoteId && (
-        <ShareModal
-          noteId={shareNoteId}
-          theme={theme}
-          onClose={() => {
-            setShowShareModal(false);
-            setShareNoteId(null);
-          }}
         />
       )}
     </div>
