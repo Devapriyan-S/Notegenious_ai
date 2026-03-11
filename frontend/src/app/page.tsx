@@ -7,7 +7,7 @@ import AIPanel from './components/AIPanel';
 import AuthModal from './components/AuthModal';
 import NoteLockModal from './components/NoteLockModal';
 import ShareModal from './components/ShareModal';
-import { Menu, Bot, X } from 'lucide-react';
+import { FileText, Edit3, Sparkles } from 'lucide-react';
 import {
   apiGetMe,
   apiLogout,
@@ -132,7 +132,12 @@ type LockModalState =
 // Main page component
 // ----------------------------------------------------------------
 export default function Home() {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme') as Theme) || 'dark';
+    }
+    return 'dark';
+  });
   const [notes, setNotes] = useState<Note[]>(() => [
     makeLocalNote(
       'Welcome to NoteGenius AI',
@@ -144,6 +149,8 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [aiPanelOpen, setAiPanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  // Mobile: which panel is active ('sidebar' | 'editor' | 'ai')
+  const [mobilePanel, setMobilePanel] = useState<'sidebar' | 'editor' | 'ai'>('sidebar');
 
   // Auth state — Python backend user
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
@@ -251,28 +258,33 @@ export default function Home() {
         const note = apiNoteToLocal(row);
         setNotes((prev) => [note, ...prev]);
         setSelectedId(note.id);
+        setMobilePanel('editor');
       } catch (err) {
         console.error('Failed to create note:', err);
         // fallback: create local note
         const note = makeLocalNote();
         setNotes((prev) => [note, ...prev]);
         setSelectedId(note.id);
+        setMobilePanel('editor');
       }
     } else {
       const note = makeLocalNote();
       setNotes((prev) => [note, ...prev]);
       setSelectedId(note.id);
+      setMobilePanel('editor');
     }
   }, [apiUser]);
 
   const handleSelectNote = useCallback((id: string) => {
     setSelectedSharedId(null);
     setSelectedId(id);
+    setMobilePanel('editor');
   }, []);
 
   const handleSelectSharedNote = useCallback((shareId: string) => {
     setSelectedId(null);
     setSelectedSharedId(shareId);
+    setMobilePanel('editor');
   }, []);
 
   const handleUpdateNote = useCallback(
@@ -581,25 +593,13 @@ export default function Home() {
           : 'bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50'
       }`}
     >
-      {/* Mobile toggle buttons */}
-      <div className="absolute left-4 top-4 z-50 flex gap-2 lg:hidden">
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className={`p-2 rounded-lg glass border ${isDark ? 'border-white/10 text-slate-300 hover:text-white' : 'border-slate-200 text-slate-600 hover:text-slate-900'}`}
-        >
-          {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
-        <button
-          onClick={() => setAiPanelOpen((v) => !v)}
-          className={`p-2 rounded-lg glass border ${isDark ? 'border-white/10 text-slate-300 hover:text-white' : 'border-slate-200 text-slate-600 hover:text-slate-900'}`}
-        >
-          {aiPanelOpen ? <X size={18} /> : <Bot size={18} />}
-        </button>
-      </div>
-
-      {/* Left Sidebar */}
-      {sidebarOpen && (
-        <div className="w-72 flex-shrink-0 h-full z-40">
+      {/* Left Sidebar — always visible on md+, mobile visibility controlled by mobilePanel */}
+      <div
+        className={`w-72 flex-shrink-0 h-full z-40 pb-16 md:pb-0 ${
+          mobilePanel === 'sidebar' ? 'flex' : 'hidden'
+        } md:flex flex-col`}
+      >
+        {sidebarOpen && (
           <Sidebar
             notes={filteredNotes}
             selectedId={selectedId}
@@ -611,9 +611,11 @@ export default function Home() {
             onSelectNote={handleSelectNote}
             onDeleteNote={handleDeleteNote}
             onSaveApiKey={handleSaveApiKey}
-            onToggleTheme={() =>
-              setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-            }
+            onToggleTheme={() => {
+              const next = theme === 'dark' ? 'light' : 'dark';
+              setTheme(next);
+              localStorage.setItem('theme', next);
+            }}
             session={fakeSession}
             sessionUnlocked={sessionUnlocked}
             onLogout={handleLogout}
@@ -624,11 +626,15 @@ export default function Home() {
             selectedSharedId={selectedSharedId}
             onSelectSharedNote={handleSelectSharedNote}
           />
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Center Editor */}
-      <div className="flex-1 h-full overflow-hidden">
+      {/* Center Editor — always visible on md+, mobile visibility controlled by mobilePanel */}
+      <div
+        className={`flex-1 h-full overflow-hidden pb-16 md:pb-0 ${
+          mobilePanel === 'editor' ? 'flex' : 'hidden'
+        } md:flex flex-col`}
+      >
         {!isSharedNoteSelected && selectedNote?.is_locked && !sessionUnlocked.has(selectedNote.id) ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -660,9 +666,13 @@ export default function Home() {
         )}
       </div>
 
-      {/* Right AI Panel */}
-      {aiPanelOpen && (
-        <div className="w-80 flex-shrink-0 h-full z-40">
+      {/* Right AI Panel — always visible on md+, mobile visibility controlled by mobilePanel */}
+      <div
+        className={`w-80 flex-shrink-0 h-full z-40 pb-16 md:pb-0 ${
+          mobilePanel === 'ai' ? 'flex' : 'hidden'
+        } md:flex flex-col`}
+      >
+        {aiPanelOpen && (
           <AIPanel
             note={editorNote}
             apiKey={apiKey}
@@ -670,8 +680,63 @@ export default function Home() {
             onApplyResult={handleApplyAIResult}
             onUpdate={handleUpdateNote}
           />
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Mobile bottom navigation bar */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 md:hidden border-t flex items-center justify-around py-2 px-4 ${
+          isDark
+            ? 'bg-[#13132b] border-white/10'
+            : 'bg-white border-slate-200'
+        }`}
+      >
+        <button
+          onClick={() => setMobilePanel('sidebar')}
+          className={`flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center rounded-xl px-4 transition-colors ${
+            mobilePanel === 'sidebar'
+              ? isDark
+                ? 'text-violet-400 bg-violet-500/10'
+                : 'text-violet-600 bg-violet-50'
+              : isDark
+                ? 'text-slate-500 hover:text-slate-300'
+                : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <FileText size={20} />
+          <span className="text-xs mt-0.5">Notes</span>
+        </button>
+        <button
+          onClick={() => setMobilePanel('editor')}
+          className={`flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center rounded-xl px-4 transition-colors ${
+            mobilePanel === 'editor'
+              ? isDark
+                ? 'text-violet-400 bg-violet-500/10'
+                : 'text-violet-600 bg-violet-50'
+              : isDark
+                ? 'text-slate-500 hover:text-slate-300'
+                : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Edit3 size={20} />
+          <span className="text-xs mt-0.5">Editor</span>
+        </button>
+        <button
+          onClick={() => setMobilePanel('ai')}
+          className={`flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center rounded-xl px-4 transition-colors ${
+            mobilePanel === 'ai'
+              ? isDark
+                ? 'text-violet-400 bg-violet-500/10'
+                : 'text-violet-600 bg-violet-50'
+              : isDark
+                ? 'text-slate-500 hover:text-slate-300'
+                : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Sparkles size={20} />
+          <span className="text-xs mt-0.5">AI</span>
+        </button>
+      </div>
 
       {/* Auth modal (sign-in button in sidebar) */}
       {showAuthModal && (

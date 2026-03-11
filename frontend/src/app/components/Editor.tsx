@@ -412,12 +412,12 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
               {speechState === 'processing' ? (
                 <>
                   <Loader2 size={13} className="animate-spin" />
-                  Transcribing...
+                  <span className="hidden sm:inline ml-1">Transcribing...</span>
                 </>
               ) : speechState === 'listening' ? (
                 <>
                   <MicOff size={13} />
-                  Stop
+                  <span className="hidden sm:inline ml-1">Stop</span>
                 </>
               ) : (
                 <Mic size={13} />
@@ -436,7 +436,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
             }`}
           >
             <Download size={13} />
-            Save .txt
+            <span className="hidden sm:inline ml-1">Save .txt</span>
           </button>
 
           {/* Share — only shown for own notes */}
@@ -451,7 +451,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
               }`}
             >
               <Share2 size={13} />
-              Share
+              <span className="hidden sm:inline ml-1">Share</span>
             </button>
           )}
 
@@ -463,7 +463,7 @@ export default function Editor({ note, theme, readOnly, onUpdate, onDelete, onSh
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
             >
               <Trash2 size={13} />
-              Delete
+              <span className="hidden sm:inline ml-1">Delete</span>
             </button>
           )}
         </div>
