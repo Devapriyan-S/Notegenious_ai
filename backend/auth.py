@@ -37,11 +37,11 @@ def send_otp_email(to_email: str, otp: str) -> None:
     """Send a 6-digit OTP to the given email address via SMTP."""
     import traceback as _traceback
     try:
-        smtp_host = "smtp.mailersend.net"
-        smtp_port = 2525
-        smtp_user = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
-        smtp_password = "mssp.Mk8Q1u6.o65qngkp803lwr12.85s8KyN"
-        smtp_from = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        smtp_host = "smtp.gmail.com"
+        smtp_port = 587
+        smtp_user = "devapriyan1723@gmail.com"
+        smtp_password = "xdbozyxyhtxrdwxl"
+        smtp_from = "devapriyan1723@gmail.com"
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = "NoteGenius AI — Email Verification Code"
@@ -78,11 +78,11 @@ def send_invite_email(to_email: str) -> None:
     """Send an invitation to join NoteGenius AI."""
     import traceback as _traceback
     try:
-        smtp_host = "smtp.mailersend.net"
-        smtp_port = 2525
-        smtp_user = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
-        smtp_password = "mssp.Mk8Q1u6.o65qngkp803lwr12.85s8KyN"
-        smtp_from = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        smtp_host = "smtp.gmail.com"
+        smtp_port = 587
+        smtp_user = "devapriyan1723@gmail.com"
+        smtp_password = "xdbozyxyhtxrdwxl"
+        smtp_from = "devapriyan1723@gmail.com"
         app_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
         msg = MIMEMultipart("alternative")
@@ -124,11 +124,11 @@ def send_share_notification_email(to_email: str, owner_email: str, note_title: s
     """Send a notification email to an existing user when a note is shared with them."""
     import traceback as _traceback
     try:
-        smtp_host = "smtp.mailersend.net"
-        smtp_port = 2525
-        smtp_user = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
-        smtp_password = "mssp.Mk8Q1u6.o65qngkp803lwr12.85s8KyN"
-        smtp_from = "MS_eqkreT@test-r83ql3pyvyxgzw1j.mlsender.net"
+        smtp_host = "smtp.gmail.com"
+        smtp_port = 587
+        smtp_user = "devapriyan1723@gmail.com"
+        smtp_password = "xdbozyxyhtxrdwxl"
+        smtp_from = "devapriyan1723@gmail.com"
         app_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
         msg = MIMEMultipart("alternative")
