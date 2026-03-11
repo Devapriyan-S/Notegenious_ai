@@ -120,7 +120,7 @@ def send_invite_email(to_email: str) -> None:
         raise
 
 
-def send_share_notification_email(to_email: str, owner_email: str, note_title: str, permission: str) -> None:
+def send_share_notification_email(to_email: str, owner_email: str, note_title: str, permission: str, note_id: str = "") -> None:
     """Send a notification email to an existing user when a note is shared with them."""
     import traceback as _traceback
     try:
@@ -130,6 +130,7 @@ def send_share_notification_email(to_email: str, owner_email: str, note_title: s
         smtp_password = "xdbozyxyhtxrdwxl"
         smtp_from = "devapriyan1723@gmail.com"
         app_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        note_url = f"{app_url}?note={note_id}&shared=true" if note_id else app_url
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = "Someone shared a note with you on Notegenious AI"
@@ -139,7 +140,7 @@ def send_share_notification_email(to_email: str, owner_email: str, note_title: s
         text_body = (
             f"{owner_email} shared a note titled \"{note_title}\" with you.\n\n"
             f"Permission: {permission}\n\n"
-            f"Open Notegenious AI to view it: {app_url}\n\n"
+            f"View the shared note: {note_url}\n\n"
             f"If you did not expect this, please ignore this email."
         )
         html_body = f"""
@@ -147,7 +148,7 @@ def send_share_notification_email(to_email: str, owner_email: str, note_title: s
       <h2 style="color:#6d28d9;">A note has been shared with you!</h2>
       <p><b>{owner_email}</b> shared a note titled <b>"{note_title}"</b> with you.</p>
       <p>Permission: <b>{permission}</b></p>
-      <p><a href="{app_url}" style="background:#6d28d9;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">Open Notegenious AI</a></p>
+      <p><a href="{note_url}" style="background:#6d28d9;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">View Shared Note</a></p>
       <p style="color:#999;font-size:12px;">If you did not expect this, please ignore this email.</p>
     </div>
     """

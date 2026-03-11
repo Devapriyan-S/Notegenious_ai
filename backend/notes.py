@@ -193,7 +193,8 @@ def share_note(note_id: str, body: ShareNoteRequest, user_id: str = Depends(get_
                 to_email=body.email,
                 owner_email=owner_row["email"],
                 note_title=note_row["title"] or "Untitled",
-                permission=row["permission"]
+                permission=row["permission"],
+                note_id=note_id,
             )
     except Exception:
         import traceback as _tb

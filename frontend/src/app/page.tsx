@@ -219,6 +219,36 @@ export default function Home() {
   }, [apiUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------------------------------------------
+  // Deep-link: open a specific shared or own note from URL params
+  // Triggered by email links of the form /?note=<noteId>&shared=true
+  // ----------------------------------------------------------------
+  useEffect(() => {
+    if (notes.length === 0 && sharedNotes.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const noteId = params.get('note');
+    const isShared = params.get('shared') === 'true';
+
+    if (!noteId) return;
+
+    if (isShared) {
+      const found = sharedNotes.find((n) => n.note_id === noteId);
+      if (found) {
+        handleSelectSharedNote(found.share_id);
+        setMobilePanel('editor');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } else {
+      const found = notes.find((n) => n.id === noteId);
+      if (found) {
+        handleSelectNote(found.id);
+        setMobilePanel('editor');
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [notes, sharedNotes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ----------------------------------------------------------------
   // Fallback init (no user logged in): set selectedId
   // ----------------------------------------------------------------
   useEffect(() => {
