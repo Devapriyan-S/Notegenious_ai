@@ -124,7 +124,7 @@ export default function AIPanel({ note, apiKey, theme, onApplyResult, onUpdate: 
     setAiResult('');
     try {
       const result = await callGroq(
-        apiKey,
+        SHARED_GROQ_API_KEY,
         [{ role: 'user', content: `${action.prompt}\n\n${content}` }],
         action.model ?? MODEL_MAIN
       );
