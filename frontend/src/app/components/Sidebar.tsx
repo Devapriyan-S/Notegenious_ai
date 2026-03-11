@@ -229,7 +229,7 @@ export default function Sidebar({
                   onSelectNote(note.id);
                 }
               }}
-              className={`group relative mb-1 p-3 rounded-xl cursor-pointer transition-all ${
+              className={`group relative mb-1 p-3 rounded-xl cursor-pointer transition-all min-h-[44px] ${
                 selectedId === note.id
                   ? isDark
                     ? 'bg-gradient-to-r from-violet-600/20 to-indigo-600/20 border border-violet-500/30'
@@ -276,48 +276,46 @@ export default function Sidebar({
                   </p>
                 </div>
 
-                {/* Action buttons — visible on hover */}
-                {hoveredId === note.id && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {/* Lock / unlock toggle (only when Supabase is configured) */}
-                    {supabaseEnabled && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isLocked) {
-                            onRequestUnlock(note.id);
-                          } else {
-                            onRequestLock(note.id);
-                          }
-                        }}
-                        title={isLocked ? 'Unlock note' : 'Lock note'}
-                        className={`p-1 rounded-md transition-colors ${
-                          isLocked
-                            ? 'text-amber-400 hover:bg-amber-400/10'
-                            : isDark
-                              ? 'text-slate-500 hover:text-amber-400 hover:bg-amber-400/10'
-                              : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'
-                        }`}
-                      >
-                        {isLocked ? (
-                          <Unlock size={12} />
-                        ) : (
-                          <Lock size={12} />
-                        )}
-                      </button>
-                    )}
-                    {/* Delete */}
+                {/* Action buttons — always visible on mobile, hover-only on desktop */}
+                <div className={`flex items-center gap-1 flex-shrink-0 ${hoveredId === note.id ? 'sm:flex' : 'sm:hidden'} flex`}>
+                  {/* Lock / unlock toggle (only when Supabase is configured) */}
+                  {supabaseEnabled && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteNote(note.id);
+                        if (isLocked) {
+                          onRequestUnlock(note.id);
+                        } else {
+                          onRequestLock(note.id);
+                        }
                       }}
-                      className="p-1 rounded-md text-red-400 hover:bg-red-400/10 flex-shrink-0"
+                      title={isLocked ? 'Unlock note' : 'Lock note'}
+                      className={`p-2 sm:p-1 rounded-md transition-colors min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center ${
+                        isLocked
+                          ? 'text-amber-400 hover:bg-amber-400/10'
+                          : isDark
+                            ? 'text-slate-500 hover:text-amber-400 hover:bg-amber-400/10'
+                            : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'
+                      }`}
                     >
-                      <Trash2 size={13} />
+                      {isLocked ? (
+                        <Unlock size={14} />
+                      ) : (
+                        <Lock size={14} />
+                      )}
                     </button>
-                  </div>
-                )}
+                  )}
+                  {/* Delete */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteNote(note.id);
+                    }}
+                    className="p-2 sm:p-1 rounded-md text-red-400 hover:bg-red-400/10 flex-shrink-0 min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           );
